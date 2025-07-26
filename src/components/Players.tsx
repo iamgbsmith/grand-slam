@@ -22,9 +22,12 @@ export function Players({
 
     // Player management
     const addPlayer = () => {
-        if (newPlayerName.trim() && !players.includes(newPlayerName.trim())) {
-            const newPlayers = [...players, newPlayerName.trim()].sort();
+        const trimmedName = newPlayerName.trim();
+        if (trimmedName && !players.includes(trimmedName)) {
+            const newPlayers = [...players, trimmedName].sort();
             setPlayers(newPlayers);
+            // Automatically make the new player active
+            setActivePlayers([...activePlayers, trimmedName]);
             setNewPlayerName('');
             setShowAddPlayer(false);
         }
