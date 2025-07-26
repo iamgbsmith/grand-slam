@@ -50,8 +50,8 @@ export function Schedule({
             if (i + 3 < shuffled.length) {
                 matches.push({
                     id: Date.now() + i,
-                    team1: [shuffled[i], shuffled[i + 1]],
-                    team2: [shuffled[i + 2], shuffled[i + 3]],
+                    team1: [shuffled[i], shuffled[i + 1]] as [string, string],
+                    team2: [shuffled[i + 2], shuffled[i + 3]] as [string, string],
                     court: Math.floor(i / 4) + 1
                 });
             }
