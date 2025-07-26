@@ -13,6 +13,7 @@ Grand Slam is a React web app which can be used to arrange doubles tennis matche
 - [x]  Configurable countdown timer
 - [x]  Persist player names and dark mode using IndexedDB
 - [x]  PWA capabilities for local installation
+- [x]  Drag and drop to move players around courts
 
 ## Demo and Installation
 
