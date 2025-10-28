@@ -123,7 +123,7 @@ export function Schedule({
     setCurrentMatches((prevMatches) => {
       const newMatches = JSON.parse(JSON.stringify(prevMatches));
 
-      const droppedMatchIndex = newMatches.findIndex((m) => m.id === matchId);
+      const droppedMatchIndex = newMatches.findIndex((m: { id: number; }) => m.id === matchId);
       if (droppedMatchIndex === -1) return prevMatches;
 
       const draggedPlayerName = draggedPlayer.player;
@@ -145,7 +145,7 @@ export function Schedule({
       } else {
         // Swapping between different matches
         const draggedMatchIndex = newMatches.findIndex(
-          (m) => m.id === draggedPlayer.matchId
+          (m: { id: number | undefined; }) => m.id === draggedPlayer.matchId
         );
         if (draggedMatchIndex === -1) return prevMatches;
 
