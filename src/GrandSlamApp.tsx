@@ -113,7 +113,7 @@ const GrandSlamApp = () => {
             {/* Footer */}
             <div className={`max-w-6xl mx-auto px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 <p className="text-sm">
-                    v1.2.0 © {new Date().getFullYear()} Grand Slam. All rights reserved.
+                    v1.2.1 © {new Date().getFullYear()} Grand Slam. All rights reserved.
                 </p>
                 <p className="text-xs mt-2">
                     Built with ☕️ in New Zealand by <a href="https://github.com/iamgbsmith?ref=grandslam" target="_blank" className="text-blue-500 hover:underline">Greg Smith</a>.
