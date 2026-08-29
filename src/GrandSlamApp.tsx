@@ -24,8 +24,6 @@ const GrandSlamApp = () => {
     const {
         state: courts,
         setState: setCourts,
-        isLoading: isCourtsLoading,
-        error: courtsError,
     } = useIndexedDBState<number>('courts', 4);
 
     // Club logo URL, persisted via IndexedDB
