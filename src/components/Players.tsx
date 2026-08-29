@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Users, UserPlus, UserMinus } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Users, UserPlus, UserMinus, Search } from 'lucide-react';
 
 interface PlayersProps {
     darkMode: boolean;
@@ -19,11 +19,31 @@ export function Players({
 
     const [showAddPlayer, setShowAddPlayer] = useState(false);
     const [newPlayerName, setNewPlayerName] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const newPlayerInputRef = useRef<HTMLInputElement>(null);
+
+    // Focus the "Enter player name" field whenever the add-player panel opens
+    useEffect(() => {
+        if (showAddPlayer) {
+            newPlayerInputRef.current?.focus();
+        }
+    }, [showAddPlayer]);
+
+    // Capitalize the first letter of a player's name (rest of the name is left as typed)
+    const capitalizeName = (name: string) =>
+        name.charAt(0).toUpperCase() + name.slice(1);
+
+    const filteredPlayers = players.filter(p =>
+        p.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     // Player management
     const addPlayer = () => {
-        const trimmedName = newPlayerName.trim();
-        if (trimmedName && !players.includes(trimmedName)) {
+        const trimmedName = capitalizeName(newPlayerName.trim());
+        const isDuplicate = players.some(
+            p => p.toLowerCase() === trimmedName.toLowerCase()
+        );
+        if (trimmedName && !isDuplicate) {
             const newPlayers = [...players, trimmedName].sort();
             setPlayers(newPlayers);
             // Automatically make the new player active
@@ -70,6 +90,7 @@ export function Players({
                     <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg">
                         <div className="flex flex-col sm:flex-row gap-3">
                             <input
+                                ref={newPlayerInputRef}
                                 type="text"
                                 value={newPlayerName}
                                 onChange={(e) => setNewPlayerName(e.target.value)}
@@ -87,8 +108,19 @@ export function Players({
                     </div>
                 )}
 
+                <div className="relative mb-4">
+                    <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search players"
+                        className={`w-full pl-10 pr-4 py-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                    />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {players.map((player, index) => (
+                    {filteredPlayers.map((player, index) => (
                         <div
                             key={index}
                             className={`p-4 rounded-lg border transition-all duration-300 ${activePlayers.includes(player)
@@ -137,10 +169,15 @@ export function Players({
                         <p>No players added yet. Add your first player to get started.</p>
                     </div>
                 )}
+
+                {players.length > 0 && filteredPlayers.length === 0 && (
+                    <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <Search className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                        <p>No players match "{searchQuery}".</p>
+                    </div>
+                )}
             </div>
         </div>
     )
-
-
 
 }

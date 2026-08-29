@@ -1,4 +1,4 @@
-import { Calendar, Clock, Save, Shuffle } from "lucide-react";
+import { Calendar, Clock, Save, Shuffle, Zap } from "lucide-react";
 import React, { useState, type DragEvent, useRef } from "react";
 
 interface Match {
@@ -19,6 +19,8 @@ interface ScheduleProps {
   activePlayers: string[];
   playHistory: Round[];
   setPlayHistory: (playHistory: Round[]) => void;
+  courts: number;
+  setCourts: (courts: number) => void;
 }
 
 export function Schedule({
@@ -26,6 +28,8 @@ export function Schedule({
   activePlayers,
   playHistory,
   setPlayHistory,
+  courts,
+  setCourts,
 }: ScheduleProps) {
   const [currentMatches, setCurrentMatches] = useState<Match[]>([]);
   const [draggedPlayer, setDraggedPlayer] = useState<{
@@ -39,25 +43,100 @@ export function Schedule({
 
   const dragItem = useRef<HTMLSpanElement>(null);
 
-  // Match generation with smart pairing
+  // Count how many matches each player has already played, from history
+  const getPlayCounts = (players: string[], history: Round[]) => {
+    const counts: Record<string, number> = Object.fromEntries(
+      players.map((p) => [p, 0])
+    );
+    history.forEach((round) => {
+      round.matches.forEach((match) => {
+        [...match.team1, ...match.team2].forEach((p) => {
+          if (p in counts) counts[p] += 1;
+        });
+      });
+    });
+    return counts;
+  };
+
+  // Choose which players sit this round in, prioritizing those who've
+  // played the fewest matches so far. Ties are broken randomly so the
+  // same "fewest games" player isn't always picked first.
+  const selectPlayersForRound = (
+    players: string[],
+    counts: Record<string, number>,
+    slots: number
+  ) => {
+    const shuffled = [...players].sort(() => Math.random() - 0.5);
+    const byPriority = shuffled.sort((a, b) => counts[a] - counts[b]);
+    return byPriority.slice(0, slots);
+  };
+
+  // Match generation with smart pairing, capped to the number of
+  // courts available and rotating players fairly based on games played
   const generateMatches = () => {
     if (activePlayers.length < 4) return;
 
-    const shuffled = [...activePlayers].sort(() => Math.random() - 0.5);
-    const matches = [];
+    const maxSlots = Math.min(activePlayers.length, courts * 4);
+    const slotsUsed = maxSlots - (maxSlots % 4); // must fill full courts of 4
+    if (slotsUsed < 4) return;
 
+    const counts = getPlayCounts(activePlayers, playHistory);
+    const selected = selectPlayersForRound(activePlayers, counts, slotsUsed);
+    const shuffled = [...selected].sort(() => Math.random() - 0.5);
+
+    const matches = [];
     for (let i = 0; i < shuffled.length; i += 4) {
-      if (i + 3 < shuffled.length) {
-        matches.push({
-          id: Date.now() + i,
-          team1: [shuffled[i], shuffled[i + 1]] as [string, string],
-          team2: [shuffled[i + 2], shuffled[i + 3]] as [string, string],
-          court: Math.floor(i / 4) + 1,
-        });
-      }
+      matches.push({
+        id: Date.now() + i,
+        team1: [shuffled[i], shuffled[i + 1]] as [string, string],
+        team2: [shuffled[i + 2], shuffled[i + 3]] as [string, string],
+        court: Math.floor(i / 4) + 1,
+      });
     }
 
     setCurrentMatches(matches);
+  };
+
+  // Fills any spare courts with matches drawn from resting players,
+  // appending them to the current round rather than replacing it.
+  const quickMatch = () => {
+    setCurrentMatches((prevMatches) => {
+      const playingPlayers = prevMatches.flatMap((match) => [
+        ...match.team1,
+        ...match.team2,
+      ]);
+      const restingPlayers = activePlayers.filter(
+        (p) => !playingPlayers.includes(p)
+      );
+
+      const spareCourts = courts - prevMatches.length;
+      const matchesToCreate = Math.min(
+        Math.floor(restingPlayers.length / 4),
+        spareCourts
+      );
+      if (matchesToCreate <= 0) return prevMatches;
+
+      const slots = matchesToCreate * 4;
+      const counts = getPlayCounts(activePlayers, playHistory);
+      const selected = selectPlayersForRound(restingPlayers, counts, slots);
+      const shuffled = [...selected].sort(() => Math.random() - 0.5);
+
+      const usedCourts = prevMatches.map((m) => m.court);
+      const nextCourtStart =
+        usedCourts.length > 0 ? Math.max(...usedCourts) + 1 : 1;
+
+      const newMatches: Match[] = [];
+      for (let i = 0; i < shuffled.length; i += 4) {
+        newMatches.push({
+          id: Date.now() + i,
+          team1: [shuffled[i], shuffled[i + 1]] as [string, string],
+          team2: [shuffled[i + 2], shuffled[i + 3]] as [string, string],
+          court: nextCourtStart + i / 4,
+        });
+      }
+
+      return [...prevMatches, ...newMatches];
+    });
   };
 
   const saveRound = () => {
@@ -224,6 +303,32 @@ export function Schedule({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
           <h2 className="text-xl font-bold">Current Round</h2>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="courts-select"
+                className={`text-sm font-medium whitespace-nowrap ${
+                  darkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
+                Courts available:
+              </label>
+              <select
+                id="courts-select"
+                value={courts}
+                onChange={(e) => setCourts(Number(e.target.value))}
+                className={`px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-white"
+                    : "bg-white border-gray-300"
+                }`}
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={generateMatches}
               disabled={activePlayers.length < 4}
@@ -259,6 +364,19 @@ export function Schedule({
             )}
           </div>
         </div>
+
+        {activePlayers.length > courts * 4 && (
+          <p
+            className={`text-sm mb-4 ${
+              darkMode ? "text-gray-400" : "text-gray-600"
+            }`}
+          >
+            {courts * 4} of {activePlayers.length} active players will be on
+            court this round ({courts} court
+            {courts > 1 ? "s" : ""} available); the others will rest and get
+            priority next round.
+          </p>
+        )}
 
         {activePlayers.length < 4 && (
           <div
@@ -408,7 +526,6 @@ export function Schedule({
             darkMode ? "bg-gray-800" : "bg-white"
           } shadow-lg`}
         >
-          <h2 className="text-xl font-bold mb-4">Resting Players</h2>
           {(() => {
             const playingPlayers = currentMatches.flatMap((match) => [
               ...match.team1,
@@ -417,53 +534,93 @@ export function Schedule({
             const restingPlayers = activePlayers.filter(
               (player) => !playingPlayers.includes(player)
             );
+            const spareCourts = courts - currentMatches.length;
+            const quickMatchesAvailable = Math.min(
+              Math.floor(restingPlayers.length / 4),
+              spareCourts
+            );
+            const canQuickMatch = quickMatchesAvailable > 0;
 
-            return restingPlayers.length === 0 ? (
-              <div
-                className={`text-center py-6 ${
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                <p>All active players are currently assigned to courts.</p>
-              </div>
-            ) : (
-              <div
-                className="flex flex-wrap gap-2 p-2 rounded-lg min-h-[44px]"
-                onDrop={handleDropOnResting}
-                onDragOver={handleDragOver}
-                onDragEnter={(e) =>
-                  e.currentTarget.classList.add(
-                    darkMode ? "bg-gray-700" : "bg-gray-100"
-                  )
-                }
-                onDragLeave={(e) =>
-                  e.currentTarget.classList.remove(
-                    darkMode ? "bg-gray-700" : "bg-gray-100"
-                  )
-                }
-              >
-                {restingPlayers.sort().map((player) => (
-                  <span
-                    key={player}
-                    draggable
-                    onDragStart={(e) =>
-                      handleDragStart(e, player, { isResting: true })
+            return (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Resting Players</h2>
+                  <button
+                    onClick={quickMatch}
+                    disabled={!canQuickMatch}
+                    title={
+                      canQuickMatch
+                        ? `Create ${quickMatchesAvailable} match${
+                            quickMatchesAvailable > 1 ? "es" : ""
+                          } from resting players`
+                        : "Needs 4+ resting players and a spare court"
                     }
-                    onDragEnd={handleDragEnd}
-                    className={`font-medium px-3 py-2 rounded-lg cursor-move ${
-                      darkMode
-                        ? "bg-orange-700 text-white"
-                        : "bg-orange-100 text-orange-800 border border-orange-300"
-                    } ${
-                      dragOverPlayer === player
-                        ? "border-2 border-blue-500"
-                        : ""
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                      canQuickMatch
+                        ? `${
+                            darkMode
+                              ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                              : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                          } text-white shadow-lg hover:shadow-xl`
+                        : `${
+                            darkMode
+                              ? "bg-gray-700 text-gray-500"
+                              : "bg-gray-300 text-gray-500"
+                          } cursor-not-allowed`
                     }`}
                   >
-                    {player}
-                  </span>
-                ))}
-              </div>
+                    <Zap className="h-4 w-4" />
+                    <span>Quick Match</span>
+                  </button>
+                </div>
+                {restingPlayers.length === 0 ? (
+                  <div
+                    className={`text-center py-6 ${
+                      darkMode ? "text-gray-400" : "text-gray-500"
+                    }`}
+                  >
+                    <p>All active players are currently assigned to courts.</p>
+                  </div>
+                ) : (
+                  <div
+                    className="flex flex-wrap gap-2 p-2 rounded-lg min-h-[44px]"
+                    onDrop={handleDropOnResting}
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) =>
+                      e.currentTarget.classList.add(
+                        darkMode ? "bg-gray-700" : "bg-gray-100"
+                      )
+                    }
+                    onDragLeave={(e) =>
+                      e.currentTarget.classList.remove(
+                        darkMode ? "bg-gray-700" : "bg-gray-100"
+                      )
+                    }
+                  >
+                    {restingPlayers.sort().map((player) => (
+                      <span
+                        key={player}
+                        draggable
+                        onDragStart={(e) =>
+                          handleDragStart(e, player, { isResting: true })
+                        }
+                        onDragEnd={handleDragEnd}
+                        className={`font-medium px-3 py-2 rounded-lg cursor-move ${
+                          darkMode
+                            ? "bg-orange-700 text-white"
+                            : "bg-orange-100 text-orange-800 border border-orange-300"
+                        } ${
+                          dragOverPlayer === player
+                            ? "border-2 border-blue-500"
+                            : ""
+                        }`}
+                      >
+                        {player}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
             );
           })()}
         </div>

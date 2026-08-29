@@ -1,19 +1,23 @@
 # Grand Slam
 
-Grand Slam is a React web app which can be used to arrange doubles tennis matches. I developed this because I was tired of booting a  Windows 7 laptop at my local club to run game scheduling software that was written in 2003 using Delphi.
+Grand Slam is a React web app which can be used to arrange doubles tennis matches. I developed this because I was tired of booting a Windows 7 laptop at my local club to run game scheduling software that was written in 2003 using Delphi.
 
 ![Player Screen](./player-screen.png?raw=true)
 
 ## Features
 
-- [x]  Dark mode for night play
-- [x]  Random doubles draws
-- [x]  Rest players from matches using inactive/active toggle
-- [x]  History of rounds played
-- [x]  Configurable countdown timer
-- [x]  Persist player names and dark mode using IndexedDB
-- [x]  PWA capabilities for local installation
-- [x]  Drag and drop to move players around courts
+- [x] Dark mode for night play
+- [x] Random doubles draws
+- [x] Rest players from matches using inactive/active toggle
+- [x] History of rounds played
+- [x] Configurable countdown timer
+- [x] Persist player names and dark mode using IndexedDB
+- [x] PWA capabilities for local installation
+- [x] Drag and drop to move players around courts
+- [x] Quick filter to search for players based on characters in their name
+- [x] A fairness scheduler to ensure resting players are prioritised for the next match
+- [x] Add your club logo by clicking on the calendar icon in the header
+- [x] "Quick Match" functionality to create a new match from resting players
 
 ## Demo and Installation
 
